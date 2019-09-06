@@ -224,20 +224,21 @@ def my_gallery():
 @app.route('/del_img/<id>')
 @login_required
 def del_img(id):
-    if Photos.query.filter_by(id=id, user_id=current_user.id).first().type == 'profile':
-        _dir = Photos.query.filter_by(id=id).first().name[1:]
-        os.remove(_dir)
-        cur_photo = Photos.query.filter_by(id=id).first()
-        cur_photo.name = '/static/img/default_p.jpeg'
-        db.session.commit()
-        return redirect(url_for('my_posts'))
-    if Photos.query.filter_by(id=id, user_id=current_user.id).first().type == 'gallery':
-        _dir = Photos.query.filter_by(id=id).first().name[1:]
-        os.remove(_dir)
-        Photos.query.filter_by(id=id, type='gallery').delete()
-        db.session.commit()
+    if Photos.query.filter_by(id=id).first().name != '/static/img/default_p.jpeg':
+        if Photos.query.filter_by(id=id, user_id=current_user.id).first().type == 'profile':
+            _dir = Photos.query.filter_by(id=id).first().name[1:]
+            os.remove(_dir)
+            cur_photo = Photos.query.filter_by(id=id).first()
+            cur_photo.name = '/static/img/default_p.jpeg'
+            db.session.commit()
+            return redirect(url_for('my_posts'))
+        if Photos.query.filter_by(id=id, user_id=current_user.id).first().type == 'gallery':
+            _dir = Photos.query.filter_by(id=id).first().name[1:]
+            os.remove(_dir)
+            Photos.query.filter_by(id=id, type='gallery').delete()
+            db.session.commit()
     return redirect(url_for('my_gallery'))
- 
+
 
 @app.route('/edit_prof')
 @login_required
