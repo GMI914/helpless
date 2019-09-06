@@ -1,0 +1,22 @@
+{% extends "bootstrap/base.html" %}
+
+{% block title %}
+    edit profile
+{% endblock %}
+
+{% block styles %}
+    {{ super() }}
+    <link rel="stylesheet" href="{{ url_for('.static', filename='signin.css') }}">
+{% endblock %}
+
+{% block content %}
+    <div style="margin: 20%">
+        {% if photo.name != '/static/img/default_p.jpeg' %}
+        <h3><a href="/del_img/{{ photo.id }}">delete current profile photo</a></h3>
+        {% endif %}
+        <form method=POST enctype=multipart/form-data action="{{ url_for('upload_prof') }}">
+            <input type=file name=photo>
+            <input type="submit">
+        </form>
+    </div>
+{% endblock %}
