@@ -16,6 +16,7 @@
             <h2 class="form-signin-heading">write about something</h2>
             {{ form.hidden_tag() }}
             {{ wtf.form_field(form.title) }}
+            {{ wtf.form_field(form.image) }}
             {{ wtf.form_field(form.content) }}
             <button class="btn btn-lg btn-primary btn-block" type="submit">upload</button>
         </form>

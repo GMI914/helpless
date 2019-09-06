@@ -1,13 +1,14 @@
 from flask import Flask, render_template, redirect, url_for, request
 from flask_bootstrap import Bootstrap
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, BooleanField, TextAreaField
+from wtforms import StringField, PasswordField, BooleanField, TextAreaField, SubmitField
+from flask_wtf.file import FileField
 from wtforms.validators import InputRequired, Email, Length
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from datetime import datetime
-from flask_uploads import UploadSet, configure_uploads, IMAGES
+from flask_uploads import UploadSet, configure_uploads, IMAGES, patch_request_class
 import os
 
 app = Flask(__name__)
@@ -21,6 +22,7 @@ login_manager.login_view = 'login'
 photos = UploadSet('photos', IMAGES)
 app.config['UPLOADED_PHOTOS_DEST'] = 'static/img'
 configure_uploads(app, photos)
+patch_request_class(app)
 
 
 class User(UserMixin, db.Model):
@@ -69,6 +71,24 @@ class RegisterForm(FlaskForm):
 class NewPostForm(FlaskForm):
     title = StringField('title', validators=[InputRequired(), Length(min=1, max=50)])
     content = TextAreaField('content', validators=[Length(min=1, max=3000)])
+    image = FileField('image')
+
+
+# mishos kodi /////////////////////////////////////////////////////////////////
+class UploadForm(FlaskForm):
+    photo = FileField()
+    submit = SubmitField()
+
+
+@app.route('/misho_upload', methods=['GET', 'POST'])
+def f_upload():
+    form = UploadForm()
+    file_url = None
+    if form.validate_on_submit():
+        f = photos.save(form.photo.data)
+        file_url = photos.url(f)
+    return render_template('misho_form.html', form=form, file_url=file_url)
+# //////////////////////////////////////////////////////////////////////////////
 
 
 @app.route('/')
@@ -131,8 +151,21 @@ def new_post():
         post = Posts(user_id=current_user.id, title=form.title.data, content=form.content.data)
         db.session.add(post)
         db.session.commit()
+        cur_post = Posts.query.filter_by(user_id=current_user.id, title=form.title.data).order_by('id')[-1]
+        image = Photos(user_id=current_user.id, post_id=cur_post.id, type='post')
+        db.session.add(image)
+        db.session.commit()
+        cur_img = Photos.query.filter_by(post_id=cur_post.id).first()
 
-        posts = Posts.query.filter_by(user_id=current_user.id)
+        # filename = photos.save(form.image.data)
+        # file_url = photos.url(filename)
+        # print(filename)
+        # print(file_url)
+
+        img_name = photos.save(form.image.data, name=str(cur_img.id) + '.jpeg')
+        cur_img.name = '/static/img/' + img_name
+        db.session.commit()
+
         return redirect(url_for('my_posts'))
 
     return render_template('new_post.html', form=form)
@@ -174,7 +207,7 @@ def edit(id):
 @app.route('/upload', methods=['GET', 'POST'])
 @login_required
 def upload():
-    if request.method == 'POST':
+    if request.method == 'POST' and 'photo' in request.files:
         new_photo = Photos(user_id=current_user.id, type='gallery')
         db.session.add(new_photo)
         db.session.commit()
@@ -195,8 +228,8 @@ def upload_prof():
         if old_photo.name == '/static/img/default_p.jpeg':
             new_photo = photos.save(request.files['photo'],
                                     name=str(Photos.query.filter_by(user_id=current_user.id,
-                                                                    type='profile').first().id)+'.jpeg')
-            old_photo.name = '/static/img/'+new_photo
+                                                                    type='profile').first().id) + '.jpeg')
+            old_photo.name = '/static/img/' + new_photo
             db.session.commit()
         else:
             old_photo.type = 'gallery'
